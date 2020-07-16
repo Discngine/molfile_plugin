@@ -32,7 +32,7 @@ INTERSURF =
 # List of plugins to build
 #   Note: molfile plugins must be first since some of the 
 #         other plugins directly depend on them
-BUILDDIRS = \
+#BUILDDIRS = \
   apbsrun \
   alascanfep \
   atomedit \
@@ -185,7 +185,7 @@ clean:
 	find compile \( -name lib_\* \) -print | xargs rm -rf
 	rm -f log.*
 	rm -f psfgen/so_locations
-	rm -f molfile_plugin/so_locations
+	rm -f molfile_plugin/so_locations##
 
 checkperms:
 	@echo "Looking for bad file permissions..."
