@@ -120,7 +120,7 @@ typedef struct {
   /* chains for existing PDBx/mmCIF files.                       */
   char chain[4];      /**< required chain name, or ""            */
 #else
-  char chain[2];      /**< required chain name, or ""            */
+  char chain[16];      /**< required chain name, or ""            */
 #endif
   /* rest are optional; use optflags to specify what's present   */
   char altloc[2];     /**< optional PDB alternate location code  */

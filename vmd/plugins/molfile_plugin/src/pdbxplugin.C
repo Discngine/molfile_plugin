@@ -46,7 +46,7 @@
 //#define PDBX_DEBUG 1
 
 //used for reading author defined values needed when reading bond info
-#define CHAIN_SIZE 4
+#define CHAIN_SIZE 16
 #define TYPE_SIZE 8
 #define BUFFER_SIZE 4096
 #define COLUMN_BUFFER_SIZE 1024
@@ -1070,7 +1070,8 @@ static int parseStructure(molfile_atom_t *atoms, int *optflags, pdbxParser *pars
     // indicating an empty insertion code.
     if (insertionIdx == MAX_COLUMNS - 1 || atom->insertion[0] == '?' || atom->insertion[0] == '.')
     {
-      atom->insertion[0] = '\0';
+      atom->insertion[0] = ' ';
+      atom->insertion[1] = '\0';
       if (parseFlags & FLAG_INSERTION)
       {
         parseFlags ^= FLAG_INSERTION;
@@ -1085,8 +1086,10 @@ static int parseStructure(molfile_atom_t *atoms, int *optflags, pdbxParser *pars
       chainbuffer[2] = '\0';
       parseFlags |= FLAG_CHAIN_LENGTH;
     }
-    atom->chain[0] = chainbuffer[0];
-    atom->chain[1] = chainbuffer[1];
+    //atom->chain[0] = chainbuffer[0];
+    //atom->chain[1] = chainbuffer[1];
+    strcpy(atom->chain,chainbuffer);
+    //printf("chain : %s\t",atom->chain);
 #endif
 
     // Assign these to the pdbx_data struct
