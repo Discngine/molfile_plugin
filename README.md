@@ -8,7 +8,7 @@
 ## Steps to compile
 
 * `cd vmd/plugins`
-* `make LINUXAMD64"` if you are on linux 64bits
+* `make LINUXAMD64` if you are on linux 64bits
 * A folder called "compile" has been created and there is the LINUXAMD64 compiled lib in it
 * It contains all the molfile plugins so just copy the "lib_LINUXAMD64" folder to your project/plugins and rename it "LINUXAMD64"
 
