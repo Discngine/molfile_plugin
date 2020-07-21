@@ -17,7 +17,7 @@ jobs:
       run: cd  vmd/plugins && make LINUXAMD64
  
   buildosx:
-    runs-on: osx-latest
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v2
