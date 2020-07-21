@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  buildlinux:
 
     runs-on: ubuntu-latest
 
@@ -15,3 +15,13 @@ jobs:
     - uses: actions/checkout@v2
     - name: make
       run: cd  vmd/plugins && make LINUXAMD64
+ 
+  buildosx:
+    runs-on: osx-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: cd  vmd/plugins && make MACOSXX86_64
+    
+    
