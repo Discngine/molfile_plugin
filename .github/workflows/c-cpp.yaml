@@ -7,21 +7,32 @@ on:
     branches: [ master ]
 
 jobs:
-  buildlinux:
+  ubuntuBuild:
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
     - name: make
-      run: cd  vmd/plugins && make LINUXAMD64
+      run: cd vmd/plugins && make LINUXAMD64
+    - name: make distrib
+      env: 
+        PLUGINDIR: compiled
+      run: cd vmd/plugins && make distrib
+
+
  
   buildosx:
     runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v2
+      env:
+        PLUGINDIR: compiled
     - name: make
       run: cd  vmd/plugins && make MACOSXX86_64
-    
+    - name: make distrib
+      env: 
+        PLUGINDIR: compiled
+      run: cd vmd/plugins && make distrib
     
