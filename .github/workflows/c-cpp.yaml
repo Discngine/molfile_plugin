@@ -30,7 +30,7 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v1
       with:
-        path: vmd/plugins/molfile_plugin_macos_clang.tar.gz
+        path: vmd/molfile_plugin_macos_clang.tar.gz
         name: molfile_plugin_macos_clang.tar.gz
     - name: Upload release asset
       if: github.event_name == 'release' && (github.event.action == 'published' || github.event.action == 'created')
@@ -65,7 +65,7 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v1
       with:
-        path: vmd/plugins/molfile_plugin_macos_clang.tar.gz
+        path: vmd/molfile_plugin_macos_clang.tar.gz
         name: molfile_plugin_macos_clang.tar.gz
     - name: Upload release asset
       if: github.event_name == 'release' && (github.event.action == 'published' || github.event.action == 'created')
