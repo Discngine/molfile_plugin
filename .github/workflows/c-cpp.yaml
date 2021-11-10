@@ -62,6 +62,8 @@ jobs:
       run: |
         ls -laR
         tar -czf ../molfile_plugin_macos_clang.tar.gz .
+        ls -l ../
+        pwd
     - name: Upload
       uses: actions/upload-artifact@v1
       with:
