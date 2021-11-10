@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest,
+          - os: "ubuntu-latest",
             artifact: "ubuntu_gcc.7z",
             build_type: "Release",
             architecture: "LINUXAMD64",
@@ -24,7 +24,7 @@ jobs:
             cxx: "g++",
             archiver: "7z a",
             generators: "Ninja"
-          - os: macos-latest,
+          - os: "macos-latest",
             artifact: "macos_clang.7z",
             build_type: "Release",
             architecture: "MACOSXX86_64",
