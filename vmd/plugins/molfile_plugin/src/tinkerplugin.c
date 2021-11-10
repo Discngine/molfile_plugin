@@ -11,7 +11,7 @@
  *
  *      $RCSfile: tinkerplugin.c,v $
  *      $Author: johns $       $Locker:  $             $State: Exp $
- *      $Revision: 1.15 $       $Date: 2017/02/03 06:13:03 $
+ *      $Revision: 1.16 $       $Date: 2021/08/26 02:25:36 $
  *
  ***************************************************************************/
 
@@ -65,28 +65,37 @@ static void *open_tinker_read(const char *filename, const char *filetype,
   }
   data->numatoms=*natoms;
 
-  while (getc(fd) != '\n'); /* skip rest of this line */
+  while (getc(data->file) != '\n'); /* skip rest of this line */
  
   return data;
 }
 
 static int read_tinker_structure(void *mydata, int *optflags, 
                                  molfile_atom_t *atoms) {
-  int i, j, atomid;
-  char *k;
+  int i, j, atomid, box_failed;
+  char buffer[1024], fbuffer[1024], *k;
   float coord;
   molfile_atom_t *atom;
   tinkerdata *data = (tinkerdata *)mydata;
   
   *optflags = MOLFILE_NOOPTIONS;
 
+  /* attempt to get box size */
+  k = fgets(fbuffer, 1024, data->file);
+  if (NULL == k) return MOLFILE_ERROR;
+  j = sscanf(fbuffer, "%f %f %f %f %f %f", &coord, &coord, &coord, &coord, &coord, &coord);
+  box_failed = (j < 3) ? 1 : 0;
+
   for (i=0; i<data->numatoms; i++) {
-    char buffer[1024], fbuffer[1024];
     int atomtypeindex=0;
-    k = fgets(fbuffer, 1024, data->file);
+
+    /* reuse line if box size failed, it's an atom line */
+    if (i > 0 || !box_failed) 
+      k = fgets(fbuffer, 1024, data->file);
+
     atom = atoms + i;
     j=sscanf(fbuffer, "%d %s %f %f %f %d", &atomid, buffer, &coord, &coord, &coord, &atomtypeindex);
-    if (k == NULL) {
+    if (NULL == k) {
       fprintf(stderr, "tinker structure) missing atom(s) in file '%s'\n", data->file_name);
       fprintf(stderr, "tinker structure) expecting '%d' atoms, found only '%d'\n", data->numatoms, i+1);
       return MOLFILE_ERROR;
@@ -149,7 +158,7 @@ static int read_tinker_timestep(void *mydata, int natoms, molfile_timestep_t *ts
 
     /* Read in atom type, X, Y, Z, skipping any remaining data fields */
     j = sscanf(fbuffer, "%d %s %f %f %f", &atomid, atom_name, &x, &y, &z);
-    if (k == NULL) {
+    if (NULL == k) {
       return MOLFILE_ERROR;
     } else if (j < 5) {
       fprintf(stderr, "tinker timestep) missing type or coordinate(s) in file '%s' for atom '%d'\n",data->file_name,i+1);
@@ -188,9 +197,9 @@ VMDPLUGIN_API int VMDPLUGIN_init() {
   plugin.prettyname = "Tinker";
   plugin.author = "John Stone";
   plugin.majorv = 0;
-  plugin.minorv = 6;
+  plugin.minorv = 7;
   plugin.is_reentrant = VMDPLUGIN_THREADSAFE;
-  plugin.filename_extension = "arc";
+  plugin.filename_extension = "arc,txyz";
   plugin.open_file_read = open_tinker_read;
   plugin.read_structure = read_tinker_structure;
   plugin.read_next_timestep = read_tinker_timestep;

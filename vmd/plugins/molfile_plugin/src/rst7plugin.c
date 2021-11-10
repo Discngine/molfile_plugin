@@ -11,7 +11,7 @@
  *
  *      $RCSfile: rst7plugin.c,v $
  *      $Author: johns $       $Locker:  $             $State: Exp $
- *      $Revision: 1.21 $       $Date: 2017/08/30 17:27:29 $
+ *      $Revision: 1.22 $       $Date: 2020/11/01 06:30:44 $
  *
  ***************************************************************************/
 
@@ -36,7 +36,7 @@ typedef struct {
 static void *open_rst_read(const char *filename, const char *filetype,int *natoms) {
   FILE *fd;
   rstdata *data;
-  int numats=0,i,j,point2,kkk=1; 
+  int numats=0,i,j,point2,kkk,velpbcoffset=0; 
   char title[82], *field;
   char line[82];
   float x, y, z,a=0.0,b=0.0,c=0.0;
@@ -56,54 +56,79 @@ static void *open_rst_read(const char *filename, const char *filetype,int *natom
   memset(data, 0, sizeof(rstdata));
 #if vmdplugin_ABIVERSION > 10
   data->ts_meta.count = -1;
-  data->ts_meta.has_velocities = 0;
+  data->ts_meta.has_velocities = 1;
 #endif
+  data->has_vels=1; /* Assume we have velocities and correct if we don't */
 
   fgets(title, 82, fd);
   vmdcon_printf(VMDCON_INFO, "rst7plugin) Title: %s\n",title);
 
   fgets(line, 82, fd);
+  kkk=1; /* parse until something is found */
   while (kkk==1) {
     /* try to read first field */
     field = strtok(line, " \t");
     if (field==NULL) {                
-      continue; /* no fields at all on this line */
+      continue; /* no fields at all on this line, continue and try again. */
     }
     numats = atoi(field);
 
     /* try to read second field will be null if not there */
     field = strtok(NULL, " \t");
     if (field==NULL) {
-      kkk=0;
-      vmdcon_printf(VMDCON_INFO, "rst7plugin) This file has no velocity info.\n");
-      data->has_vels=0;
+      vmdcon_printf(VMDCON_INFO, "rst7plugin) This file has no timestep information.\n");
     } else {
       timesteprst = strtod(field, NULL);
-      vmdcon_printf(VMDCON_INFO, "rst7plugin) This file contains velocity info.\n");
-      data->has_vels=1;
-#if vmdplugin_ABIVERSION > 10
-      data->ts_meta.has_velocities = 1;
-#endif
-      kkk=0;
+      vmdcon_printf(VMDCON_INFO, "rst7plugin) This file is from timestep %f.\n", timesteprst);
     }
+    kkk=0;
   }
 
   point2=ftell(fd);
   data->file = fd;
-  vmdcon_printf(VMDCON_INFO, "rst7plugin) The Restartcrd has %d atoms.\n",numats);
+  vmdcon_printf(VMDCON_INFO, "rst7plugin) This restartcrd has %d atoms.\n",numats);
 
   /* skip over coordinate data */
   for (i=0; i<numats; i++) {
     j = fscanf(fd, "%f%f%f", &x, &y, &z);
   }
-
+  
+  /* Store the current file offset in case we must rewind to parse 
+   * PBC unit cell information if it turns out that velocities aren't present.
+   */
+  velpbcoffset=ftell(fd);
+  
   /* skip over velocity data, if present */
   if (data->has_vels) {
     for (i=0; i<numats; i++) {
       j = fscanf(fd, "%f%f%f", &x, &y, &z);
+
+      /* If we reach the end of file prematurely, there weren't really 
+       * velocities in the file.  Reset the file pointer, and check for boxes.
+       */
+      if (j == EOF) {
+        /* Rewind and go back! The file doesn't have velocities after all. */
+        fseek(fd, velpbcoffset, SEEK_SET);
+        data->has_vels = 0;
+#if vmdplugin_ABIVERSION > 10
+        data->ts_meta.has_velocities = 0;
+#endif
+        if (i == 2) {
+          vmdcon_printf(VMDCON_INFO, "rst7plugin) This file does not contain velocity info.\n");
+        } else {
+          vmdcon_printf(VMDCON_INFO, "rst7plugin) This file does not have the right number of entries for velocity or boxsize info.\n");
+        }
+        break;
+      }
     }
   }
-  
+
+  /* Recheck if we have velocity info -- it may have changed in the loop. */
+  if (data->has_vels) {
+    vmdcon_printf(VMDCON_INFO, "rst7plugin) This file contains velocity info.\n");
+  }
+ 
+  /* Parse PBC unit cell side lengths and angles. */ 
   j = fscanf(fd, "%f%f%f%f%f%f", &x, &y, &z,&a,&b,&c);
   if (j != EOF) {
     vmdcon_printf(VMDCON_INFO, "rst7plugin) This restartcrd file has box info.\n");
@@ -150,6 +175,7 @@ static int read_rst_timestep(void *mydata, int natoms, molfile_timestep_t *ts) {
     /* changed to i=1 BB */
     j = fscanf(rst->file, "%f%f%f", &x, &y, &z);
     if (j == EOF) {
+      vmdcon_printf(VMDCON_ERROR, "rst7plugin) End of file reached before read\n");
       return MOLFILE_ERROR;
     } else if (j <= 0) {
       vmdcon_printf(VMDCON_ERROR, "rst7plugin) Problem reading CRD file\n");
@@ -165,6 +191,7 @@ static int read_rst_timestep(void *mydata, int natoms, molfile_timestep_t *ts) {
     for (i=0; i<rst->numatoms; i++)  {
       j = fscanf(rst->file, "%f%f%f", &x, &y, &z);
       if (j == EOF) {
+        vmdcon_printf(VMDCON_ERROR, "rst7plugin) End of file reached before read\n");
         return MOLFILE_ERROR;
       } else if (j <= 0) {
         vmdcon_printf(VMDCON_ERROR, "rst7plugin) Problem reading velocities\n");
@@ -172,7 +199,7 @@ static int read_rst_timestep(void *mydata, int natoms, molfile_timestep_t *ts) {
       }
 #if vmdplugin_ABIVERSION > 10
       if (ts->velocities != NULL) {
-        ts->velocities[3*i] = x;
+        ts->velocities[3*i  ] = x;
         ts->velocities[3*i+1] = y;
         ts->velocities[3*i+2] = z;
       }
@@ -280,9 +307,9 @@ VMDPLUGIN_API int VMDPLUGIN_init(){
   plugin.type = MOLFILE_PLUGIN_TYPE;
   plugin.name = "rst7";
   plugin.prettyname = "AMBER7 Restart";
-  plugin.author = "Brian Bennion, Axel Kohlmeyer";
+  plugin.author = "Brian Bennion, Axel Kohlmeyer, Josh Vermaas, John Stone";
   plugin.majorv = 0;
-  plugin.minorv = 5;
+  plugin.minorv = 6;
   plugin.is_reentrant = VMDPLUGIN_THREADUNSAFE;
   plugin.filename_extension = "rst7";
   plugin.open_file_read = open_rst_read;

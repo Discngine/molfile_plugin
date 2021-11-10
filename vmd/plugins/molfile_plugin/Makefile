@@ -1,5 +1,5 @@
 # Makefile for molecule file readers
-# $Id: Makefile,v 1.132 2019/02/07 21:22:05 johns Exp $
+# $Id: Makefile,v 1.133 2020/07/02 17:05:31 mariano Exp $
 
 .SILENT:
 
@@ -51,6 +51,13 @@ STATICPLUGINS += orcaplugin
 PLUGINS       += orcaplugin.so
 endif
 
+#
+# Testing qcschema plugin on LINUXAMD64
+#
+ifeq ($(ARCH),LINUXAMD64)
+STATICPLUGINS += qcschemaplugin
+PLUGINS       += qcschemaplugin.so
+endif
 
 #
 # Check to see if we should build the optional expat-based plugins
@@ -301,6 +308,9 @@ mol2plugin.so: ${ARCHDIR}/mol2plugin.o
 moldenplugin.so: ${ARCHDIR}/moldenplugin.o 
 	$(SHLD) $(LOPTO)${ARCHDIR}/$@ $? $(LDFLAGS)
 
+qcschemaplugin.so: ${ARCHDIR}/qcschemaplugin.o 
+	$(SHLD) $(LOPTO)${ARCHDIR}/$@ $? $(LDFLAGS)
+
 molemeshplugin.so: ${ARCHDIR}/molemeshplugin.o
 	$(SHLD) $(LOPTO)${ARCHDIR}/$@ $? $(LDFLAGS)
 
@@ -542,6 +552,9 @@ ${ARCHDIR}/mol2plugin.o: mol2plugin.C ${PLUGINAPI}
 ${ARCHDIR}/moldenplugin.o: moldenplugin.c ${PLUGINAPI} periodic_table.h
 	$(CC) $(CCFLAGS) $(SHLDFLAGS) $(INCDIR) -c $< $(COPTO)$@
 
+${ARCHDIR}/qcschemaplugin.o: qcschemaplugin.c ${PLUGINAPI} periodic_table.h qcschema_json.c
+	$(CC) $(CCFLAGS) $(SHLDFLAGS) $(INCDIR) -c $< $(COPTO)$@
+
 ${ARCHDIR}/molemeshplugin.o: molemeshplugin.C ${PLUGINAPI}
 	$(CXX) $(CXXFLAGS) $(SHLDFLAGS) $(INCDIR) -c $< $(COPTO)$@
 
@@ -711,6 +724,13 @@ ARCHIVEOBJS += ${ARCHDIR}/orcaplugin-s.o
 endif
 ifeq ($(ARCH),MACOSXX86)
 ARCHIVEOBJS += ${ARCHDIR}/orcaplugin-s.o
+endif
+
+#
+# Testing qcschema plugin on LINUXAMD64
+#
+ifeq ($(ARCH),LINUXAMD64)
+ARCHIVEOBJS += ${ARCHDIR}/qcschemaplugin-s.o
 endif
 
 #
@@ -896,6 +916,9 @@ ${ARCHDIR}/mol2plugin-s.o: mol2plugin.C ${PLUGINAPI}
 
 ${ARCHDIR}/moldenplugin-s.o: moldenplugin.c ${PLUGINAPI} periodic_table.h
 	${CC} ${SCCFLAGS} $(INCDIR) $(DEF)"VMDPLUGIN=molfile_moldenplugin" -c $< $(COPTO)$@
+
+${ARCHDIR}/qcschemaplugin-s.o: qcschemaplugin.c ${PLUGINAPI} periodic_table.h
+	${CC} ${SCCFLAGS} $(INCDIR) $(DEF)"VMDPLUGIN=molfile_qcschemaplugin" -c $< $(COPTO)$@
 
 ${ARCHDIR}/molemeshplugin-s.o: molemeshplugin.C ${PLUGINAPI}
 	${CXX} ${SCXXFLAGS} $(INCDIR) $(DEF)"VMDPLUGIN=molfile_molemeshplugin" -c $< $(COPTO)$@

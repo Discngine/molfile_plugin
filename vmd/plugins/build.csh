@@ -276,6 +276,24 @@ switch ( `hostname` )
     echo "Plugin builds done..."
     breaksw;
 
+  case macarm*:
+    echo "Using build settings for macarm local build..."
+#    setenv HDFINC "-I/Projects/vmd/vmd/lib/hdf5/hdf5-1.10.2/src -I/Projects/vmd/vmd/lib/hdf5/hdf5-1.10.2/hl/src"
+#    setenv HDFLIB -L/Projects/vmd/vmd/lib/hdf5
+#    setenv HDFLDFLAGS "-lhdf5 -lhdf5_hl"
+
+#    setenv NETCDFINC -I/Projects/vmd/vmd/lib/netcdf/include
+#    setenv NETCDFLIB -L/Projects/vmd/vmd/lib/netcdf
+
+#    setenv SQLITEINC -I/Projects/vmd/vmd/lib/sqlite/sqlite
+#    setenv SQLITELIB -L/Projects/vmd/vmd/lib/sqlite
+
+    setenv TCLINC -I/Users/johns/vmd/lib/tcl/include
+    ## MacOS X framework paths
+    setenv TCLLIB -F/Users/johns/vmd/lib/tcl
+    make MACOSXARM64 TCLINC=-I/Users/johns/vmd/lib/tcl/lib_MACOSXARM64/Tcl.framework/Headers TCLLIB=$TCLLIB/lib_MACOSXARM64 >& log.MACOSXARM64.$DATE
+    breaksw;
+
   case tijuana*:
     echo "Using build settings for tijuana local build..."
 #    setenv HDFINC "-I/Projects/vmd/vmd/lib/hdf5/hdf5-1.10.2/src -I/Projects/vmd/vmd/lib/hdf5/hdf5-1.10.2/hl/src"
@@ -429,7 +447,6 @@ switch ( `hostname` )
 
   ## Pleiades ###
   case orion*:
-  case sphere*:
   case pixel*:
     echo "Using build settings for Linux.."
     setenv NETCDFINC -I/home/johns/vmd/lib/netcdf/include
@@ -437,6 +454,34 @@ switch ( `hostname` )
     setenv TCLINC -I/home/johns/vmd/lib/tcl/include
     setenv TCLLIB -L/home/johns/vmd/lib/tcl
     cd $unixdir; gmake LINUXAMD64 TCLINC=$TCLINC TCLLIB=$TCLLIB/lib_LINUXAMD64 >& log.LINUXAMD64.$DATE  < /dev/null &
+    echo "Waiting for all plugin make jobs to complete..."
+    wait;
+    echo "^G^G^G^G"
+    echo "Plugin builds done..."
+    breaksw;
+
+
+  case sphere*:
+    ## Win32 include/link paths
+    set path = ( "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\bin\HostX86\x86" $path )
+    setenv INCLUDE "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\ATLMFC\include;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\include;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\ucrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\shared;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\winrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\cppwinrt;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\ATLMFC\include;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\include;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\ucrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\shared;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\winrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\cppwinrt"
+    setenv LIB "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\ATLMFC\lib\x86;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\lib\x86;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\lib\um\x86;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\ucrt\x86;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\um\x86;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\ATLMFC\lib\x86;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\lib\x86;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\lib\um\x86;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\ucrt\x86;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\um\x86;"
+    setenv windir /cygdrive/c/users/johns/Desktop/build/plugins
+    setenv TCLINC -IC:/users/johns/Desktop/build/vmd/lib/tcl/include
+    setenv TCLLIB /LIBPATH:C:/users/johns/Desktop/build/vmd/lib/tcl
+    cd $windir;
+    make -j 1 WIN32 TCLINC=$TCLINC TCLLIB=$TCLLIB/lib_WIN32 >& log.WIN32.$DATE
+
+    ## Win64 include/link paths
+    set path = ( "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\bin\Hostx64\x64" $path )
+    setenv INCLUDE "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\ATLMFC\include;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\include;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\ucrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\shared;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\winrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\cppwinrt;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\ATLMFC\include;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\include;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\ucrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\shared;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\winrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\cppwinrt"
+    setenv LIB "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\ATLMFC\lib\x64;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\lib\x64;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\lib\um\x64;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\ucrt\x64;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\um\x64;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\ATLMFC\lib\x86;C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\lib\x86;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\lib\um\x86;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\ucrt\x86;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\um\x86;"
+    setenv windir /cygdrive/c/users/johns/Desktop/build/plugins
+    setenv TCLINC -IC:/users/johns/Desktop/build/vmd/lib/tcl/include
+    setenv TCLLIB /LIBPATH:C:/users/johns/Desktop/build/vmd/lib/tcl
+    cd $windir;
+    make -j 1 WIN64 TCLINC=$TCLINC TCLLIB=$TCLLIB/lib_WIN64 >& log.WIN64.$DATE
+
     echo "Waiting for all plugin make jobs to complete..."
     wait;
     echo "^G^G^G^G"

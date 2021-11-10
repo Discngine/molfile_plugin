@@ -11,7 +11,7 @@
  *
  *      $RCSfile: jsplugin.c,v $
  *      $Author: johns $       $Locker:  $             $State: Exp $
- *      $Revision: 1.86 $       $Date: 2019/12/02 16:04:45 $
+ *      $Revision: 1.91 $       $Date: 2020/10/21 16:01:57 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -88,6 +88,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <math.h>
 
@@ -99,10 +100,10 @@
 /* allocate memory and return a pointer that is aligned on a given   */
 /* byte boundary, to be used for page- or sector-aligned I/O buffers */
 /* We use this if posix_memalign() is not available...               */
-#if 1 /* sizeof(unsigned long) == sizeof(void*) */
-#define myintptrtype unsigned long
-#elif 1   /* sizeof(size_t) == sizeof(void*) */
+#if defined(_WIN64)  /* sizeof(size_t) == sizeof(void*) */
 #define myintptrtype size_t
+#elif 1 /* sizeof(unsigned long) == sizeof(void*) */
+#define myintptrtype unsigned long
 #else
 #define myintptrtype uintptr_t  /* C99 */
 #endif
@@ -128,7 +129,7 @@ static void *alloc_aligned_ptr(size_t sz, size_t blocksz, void **unalignedptr) {
 #define JSENDIANISM      0x12345678
 
 #define JSMAJORVERSION   2
-#define JSMINORVERSION   17
+#define JSMINORVERSION   19
 
 #define JSNFRAMESOFFSET  (strlen(JSHEADERSTRING) + 20)
 
@@ -172,7 +173,7 @@ static void *alloc_aligned_ptr(size_t sz, size_t blocksz, void **unalignedptr) {
 typedef struct {
   int verbose;                 /* flag to enable console info output    */
   fio_fd fd;                   /* main file descriptor                  */
-  long natoms;                 /* handle uses a long type for natoms to */
+  ptrdiff_t natoms;            /* handle uses a long type for natoms to */
                                /* help force promotion of file offset   */
                                /* arithmetic to long types              */
 
@@ -273,6 +274,10 @@ static void *open_js_read(const char *path, const char *filetype, int *natoms) {
   js = (jshandle *)malloc(sizeof(jshandle));
   memset(js, 0, sizeof(jshandle));
   js->verbose = (getenv("VMDJSVERBOSE") != NULL);
+#if defined(_WIN64)
+  js->verbose = 1;
+#endif
+
 #if JSMAJORVERSION > 1
   js->parsed_structure=0;
   js->directio_block_size=1;
@@ -402,13 +407,13 @@ static void *open_js_read(const char *path, const char *filetype, int *natoms) {
   /* skip bulk solvent, useful for faster loading of very large */
   /* structures                                                 */
   if (getenv("VMDJSMAXATOMIDX") != NULL) {
-    long maxatomidx = atoi(getenv("VMDJSMAXATOMIDX"));
+    ptrdiff_t maxatomidx = atoi(getenv("VMDJSMAXATOMIDX"));
     if (maxatomidx < 0)
       maxatomidx = 0;
     if (maxatomidx >= js->natoms)
       maxatomidx = js->natoms - 1;
 
-    printf("jsplugin) Short-reads of timesteps enabled: %ld / %ld atoms (%.2f%%)\n",
+    printf("jsplugin) Short-reads of timesteps enabled: %td / %td atoms (%.2f%%)\n",
            maxatomidx, js->natoms, 100.0*(maxatomidx+1) / ((double) js->natoms));
   }
 #endif
@@ -439,10 +444,10 @@ static int js_calc_timestep_blocking_info(void *mydata) {
 
 #if defined(INFOMSGS)
   if (js->verbose) {
-    printf("jsplugin) TS block size %ld  curpos: %ld  blockpos: %ld\n", 
-           (long) js->directio_block_size, 
-           (long) js->ts_file_offset, 
-           (long) ts_block_offset);
+    printf("jsplugin) TS block size %td  curpos: %td  blockpos: %td\n", 
+           (ptrdiff_t) js->directio_block_size, 
+           (ptrdiff_t) js->ts_file_offset, 
+           (ptrdiff_t) ts_block_offset);
   }
 #endif
 
@@ -481,11 +486,11 @@ static int js_calc_timestep_blocking_info(void *mydata) {
 
 #if defined(INFOMSGS)
   if (js->verbose) {
-    printf("jsplugin) TS crds sz: %ld psz: %ld  ucell sz: %ld psz: %ld\n",
-           (long) js->ts_crd_sz,
-           (long) js->ts_crd_padsz, 
-           (long) js->ts_ucell_sz, 
-           (long) js->ts_ucell_padsz);
+    printf("jsplugin) TS crds sz: %td psz: %td  ucell sz: %td psz: %td\n",
+           (ptrdiff_t) js->ts_crd_sz,
+           (ptrdiff_t) js->ts_crd_padsz, 
+           (ptrdiff_t) js->ts_ucell_sz, 
+           (ptrdiff_t) js->ts_ucell_padsz);
   }
 #endif
 
@@ -496,7 +501,7 @@ static int js_calc_timestep_blocking_info(void *mydata) {
 static int read_js_structure(void *mydata, int *optflags,
                              molfile_atom_t *atoms) {
   jshandle *js = (jshandle *) mydata;
-  long i;
+  ptrdiff_t i;
 
   if (optflags != NULL)
     *optflags = MOLFILE_NOOPTIONS; /* set to no options until we read them */
@@ -569,7 +574,7 @@ static int read_js_structure(void *mydata, int *optflags,
   /* skip bulk solvent, useful for faster loading of very large */
   /* structures                                                 */
   if (getenv("VMDJSMAXATOMIDX") != NULL) {
-    long maxatomidx = atoi(getenv("VMDJSMAXATOMIDX"));
+    ptrdiff_t maxatomidx = atoi(getenv("VMDJSMAXATOMIDX"));
     if (maxatomidx < 0)
       maxatomidx = 0;
     if (maxatomidx >= js->natoms)
@@ -685,7 +690,9 @@ static int read_js_structure(void *mydata, int *optflags,
         if (js->reverseendian)
           swap4_aligned(&js->numdihedrals, 1);
 #if defined(INFOMSGS)
-        printf("jsplugin)   %d dihedrals...\n", js->numdihedrals);
+        if (js->verbose) {
+          printf("jsplugin)   %d dihedrals...\n", js->numdihedrals);
+        }
 #endif
         fio_fseek(js->fd, sizeof(int)*4L*js->numdihedrals, FIO_SEEK_CUR);
 
@@ -1219,12 +1226,12 @@ static int read_js_angles(void *v,
 #if 1 
 // XXX prototypical out-of-core trajectory analysis API
 static int read_js_timestep_index_offsets(void *v, int natoms, 
-                                          long frameindex,
+                                          ptrdiff_t frameindex,
                                           int firstatom, int numatoms,
                                           fio_fd *directio_fd,
-                                          long *startoffset,
-                                          long *fileoffset,
-                                          long *readlen) {
+                                          ptrdiff_t *startoffset,
+                                          ptrdiff_t *fileoffset,
+                                          ptrdiff_t *readlen) {
   jshandle *js = (jshandle *)v;
   fio_size_t framelen;
 
@@ -1262,7 +1269,7 @@ static int read_js_timestep_index_offsets(void *v, int natoms,
 
 #if 0
 static int read_js_timestep_index(void *v, int natoms, 
-                                  long frameindex,
+                                  ptrdiff_t frameindex,
                                   molfile_timestep_t *ts) {
 }
 #endif
@@ -1305,9 +1312,9 @@ static int read_js_timestep(void *v, int natoms, molfile_timestep_t *ts) {
     /* structures                                                 */
     if (getenv("VMDJSMAXATOMIDX") != NULL) {
       fio_size_t bszmask;
-      long maxatompadsz, skipatompadsz;
+      ptrdiff_t maxatompadsz, skipatompadsz;
 
-      long maxatomidx = atoi(getenv("VMDJSMAXATOMIDX"));
+      ptrdiff_t maxatomidx = atoi(getenv("VMDJSMAXATOMIDX"));
       if (maxatomidx < 0)
         maxatomidx = 0;
       if (maxatomidx >= js->natoms)
@@ -1419,8 +1426,8 @@ static int read_js_timestep(void *v, int natoms, molfile_timestep_t *ts) {
       if (readlen < 0) {
         perror("jsplugin) fio_readv(): ");
       } else if (readlen != 0) {
-        printf("jsplugin) mismatched read: %ld, expected %ld\n", 
-               (long) readlen, (long) framelen);
+        printf("jsplugin) mismatched read: %td, expected %td\n", 
+               (ptrdiff_t) readlen, (ptrdiff_t) framelen);
       }
 
       return MOLFILE_EOF;
@@ -1541,7 +1548,7 @@ static void *open_js_write(const char *path, const char *filetype, int natoms) {
 static int write_js_structure(void *mydata, int optflags,
                               const molfile_atom_t *atoms) {
   jshandle *js = (jshandle *) mydata;
-  long i;
+  ptrdiff_t i;
 
   /* use block-based I/O by default when writing structures larger */
   /* than JSBLOCKIO_THRESH atoms, or when directed by the user     */
@@ -2040,7 +2047,7 @@ static int write_js_angles(void * v,
 static int write_js_timestep(void *v, const molfile_timestep_t *ts) { 
   jshandle *js = (jshandle *)v;
   double *unitcell=NULL;
-  long zeropadsz=0;
+  ptrdiff_t zeropadsz=0;
 
   /* If no structure data was written and this is the first timestep */
   /* we must complete writing the file header and performing the     */
@@ -2159,6 +2166,8 @@ static void close_js_write(void *v) {
  */
 static molfile_plugin_t plugin;
 
+#if !defined(VMDJSPLUGININCLUDESRC)
+
 VMDPLUGIN_API int VMDPLUGIN_init() {
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
@@ -2201,6 +2210,7 @@ VMDPLUGIN_API int VMDPLUGIN_fini() {
   return VMDPLUGIN_SUCCESS;
 }
 
+#endif
   
 #ifdef TEST_JSPLUGIN
 
@@ -2240,7 +2250,7 @@ int main(int argc, char *argv[]) {
   void *v;
   jshandle *js;
   int natoms, i;
-  long sz, blocksz;
+  ptrdiff_t sz, blocksz;
   float sizeMB =0.0, totalMB = 0.0;
   double starttime, endtime, totaltime = 0.0;
   int do_io = 1;
@@ -2267,7 +2277,7 @@ int main(int argc, char *argv[]) {
   // host I/O immediately followed by host-GPU copies of each timestep
   cudaError_t crc;
   cudaStream_t devstream;
-  long maxatomidx=-1;
+  ptrdiff_t maxatomidx=-1;
   int devcount;
   float *devptr=NULL;
 
@@ -2396,14 +2406,15 @@ int main(int argc, char *argv[]) {
           fflush(stdout);
         }
         int rc=0;
+#if defined(ENABLECUDAGDS)
         if (cufileinuse) {
 #if 0
           /* read an even multiple of the block size */
-          long rsz = natoms * 3L * sizeof(float);
+          ptrdiff_t rsz = natoms * 3L * sizeof(float);
           rsz = (rsz + (blocksz - 1)) & (~(blocksz - 1));
-          long foffset = i * rsz;
+          ptrdiff_t foffset = i * rsz;
 #endif
-          long startoffset, foffset, readlen;
+          ptrdiff_t startoffset, foffset, readlen;
           fio_fd directio_fd;
           read_js_timestep_index_offsets(v, natoms, i, 0, natoms,
                                          &directio_fd,
@@ -2412,7 +2423,7 @@ int main(int argc, char *argv[]) {
                                          &readlen);
 
 printf("cuFileRead(): offset %ld  readlen: %ld\n", foffset, readlen);
-          long ret = 0;
+          ptrdiff_t ret = 0;
           ret = cuFileRead(cfh, (char *) devptr, readlen, foffset);
           if (ret < 0) {
             const char *descp = "unknown error code";
@@ -2426,9 +2437,11 @@ printf("cuFileRead(): offset %ld  readlen: %ld\n", foffset, readlen);
             printf("Error: cuFileRead(): %ld, '%s'\n", ret, descp);
             return -1;
           }
-        } else {
+        } else
+#else
           rc = read_js_timestep(v, natoms, &timestep);
-        }
+#endif
+
         if (rc) {
           printf("jsplugin) error in read_js_timestep on frame %d\n", i);
           /* return 1; */

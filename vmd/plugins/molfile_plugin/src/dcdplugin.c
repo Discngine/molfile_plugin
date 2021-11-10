@@ -11,7 +11,7 @@
  *
  *      $RCSfile: dcdplugin.c,v $
  *      $Author: johns $       $Locker:  $             $State: Exp $
- *      $Revision: 1.86 $       $Date: 2019/02/07 20:29:00 $
+ *      $Revision: 1.88 $       $Date: 2020/12/17 17:14:07 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -49,6 +49,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <math.h>
 #include <time.h>
@@ -385,11 +386,11 @@ static int read_dcdheader(fio_fd fd, int *N, int *NSET, int *ISTART,
   *FREEINDEXES = NULL;
   *fixedcoords = NULL;
   if (*NAMNF != 0) {
-    (*FREEINDEXES) = (int *) calloc((((long)(*N))-(*NAMNF)), sizeof(int));
+    (*FREEINDEXES) = (int *) calloc((((ptrdiff_t)(*N))-(*NAMNF)), sizeof(int));
     if (*FREEINDEXES == NULL)
       return DCD_BADMALLOC;
 
-    *fixedcoords = (float *) calloc(((long)(*N))*4L - (*NAMNF), sizeof(float));
+    *fixedcoords = (float *) calloc(((ptrdiff_t)(*N))*4L - (*NAMNF), sizeof(float));
     if (*fixedcoords == NULL)
       return DCD_BADMALLOC;
 
@@ -406,7 +407,7 @@ static int read_dcdheader(fio_fd fd, int *N, int *NSET, int *ISTART,
       return DCD_BADFORMAT;
     }
 
-    ret_val = READ(fd, (*FREEINDEXES), ((long) ((*N)-(*NAMNF)))*sizeof(int));
+    ret_val = READ(fd, (*FREEINDEXES), ((ptrdiff_t) ((*N)-(*NAMNF)))*sizeof(int));
     CHECK_FREAD(ret_val, "reading size of index array");
     CHECK_FEOF(ret_val, "reading size of index array");
 
@@ -542,7 +543,7 @@ static int read_dcdstep(fio_fd fd, int N, float *X, float *Y, float *Z,
                         int first, int *indexes, float *fixedcoords, 
                         int reverseEndian, int charmm) {
   int ret_val;    /* Return value from read */
-  long rec_scale;
+  ptrdiff_t rec_scale;
   int hugefile = (N > (1L<<30)) ? 1 : 0;
   int check_reclen = 1; /* Enable Fortran record length value safety checks */
 
@@ -695,8 +696,8 @@ static int read_dcdstep(fio_fd fd, int N, float *X, float *Y, float *Z,
  *               next timestep.
  */
 static int skip_dcdstep(fio_fd fd, int natoms, int nfixed, int charmm) {
-  long seekoffset = 0;
-  long rec_scale;
+  ptrdiff_t seekoffset = 0;
+  ptrdiff_t rec_scale;
 
   if (charmm & DCD_HAS_64BIT_REC) {
     rec_scale=RECSCALE64BIT;
@@ -870,12 +871,14 @@ static void *open_dcd_read(const char *path, const char *filetype,
 
   if (!path) return NULL;
 
+#if !(defined(_MSC_VER) && defined(FASTIO_NATIVEWIN32))
   /* See if the file exists, and get its size */
   memset(&stbuf, 0, sizeof(struct stat));
   if (stat(path, &stbuf)) {
     printf("dcdplugin) Could not access file '%s'.\n", path);
     return NULL;
   }
+#endif
 
   if (fio_open(path, FIO_READ, &fd) < 0) {
     printf("dcdplugin) Could not open file '%s' for reading.\n", path);
@@ -1179,7 +1182,7 @@ VMDPLUGIN_API int VMDPLUGIN_init() {
   plugin.prettyname = "CHARMM,NAMD,XPLOR DCD Trajectory";
   plugin.author = "Axel Kohlmeyer, Justin Gullingsrud, John Stone";
   plugin.majorv = 1;
-  plugin.minorv = 16;
+  plugin.minorv = 18;
   plugin.is_reentrant = VMDPLUGIN_THREADSAFE;
   plugin.filename_extension = "dcd";
   plugin.open_file_read = open_dcd_read;

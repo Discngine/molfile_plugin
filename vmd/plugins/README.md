@@ -1,3 +1,54 @@
+# Compilation steps
+
+## Linux 64 bits
+
+
+
+## OSX
+
+
+### Install tcl
+If you plan to use the default tcl version considered by VMD, then you need to download tcl 8.5. 
+
+Download & install http://www.tcl.tk/software/tcltk/downloadnow85.html
+Unzip the archive 
+```bash
+cd tcl8.5.19/macosx
+CC=clang ./configure
+make -f Makefile
+sudo make install -f Makefile
+```
+
+Then you can define these as environment variables
+
+```bash
+export TCLINC=/usr/local/include
+export TCLLIB=/usr/local/lib
+```
+
+### Install netcdf
+If you want to compile the netcdf plugin & have netcdf support you also need this library: 
+```bash 
+sudo port install netcdf
+export NETCDFINC=-I/opt/local/include
+export NETCDFLIB=/opt/local/lib/libnetcdf.dylib
+export NETCDFLDFLAGS=-Lnetcdf
+```
+
+### Compile the molfile plugin (for X86_64 Intel chipset)
+
+adapt the TCLLIB variable to the tcl version you have installed
+
+In this repo: 
+```bash
+cd plugins 
+make MACOSXX86_64 TCLINC=$TCLINC TCLLIB=$TCLLIB/libtcl8.5.dylib
+export PLUGINDIR=$PWD/compiled
+make distrib
+```
+
+# Original Documentation
+
 VMD Plugin README
 -----------------
   This directory is the root of the plugin directory for VMD.  

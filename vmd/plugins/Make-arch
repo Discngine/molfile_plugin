@@ -28,6 +28,7 @@ make-arch-help:
 	@echo " LINUXPPC64"
 	@echo " LINUXIA64"
 	@echo " MACOSX"
+	@echo " MACOSXARM64"
 	@echo " MACOSXX86"
 	@echo " MACOSXX86_64"
 	@echo " NETBSD"
@@ -468,6 +469,23 @@ MACOSX:
 	"SHLD = c++ -bundle" \
 	"TCLSHLD = c++ -dynamiclib"
 
+MACOSXARM64:
+	$(MAKE) dynlibs staticlibs bins \
+	"ARCH = MACOSXARM64" \
+	"COPTO = -m64 -fPIC -o " \
+	"LOPTO = -m64 -fPIC -o " \
+	"CC = cc" \
+	"CXX = c++" \
+	"DEF = -D" \
+	"CCFLAGS = -m64 -Os -Wall -fPIC -dynamic" \
+	"CXXFLAGS = -m64 -Os -Wall -fPIC -dynamic" \
+	"TCLLDFLAGS = -framework Tcl" \
+	"AR = ar" \
+	"NM = nm -p" \
+	"RANLIB = ranlib" \
+	"SHLD = c++ -bundle" \
+	"TCLSHLD = c++ -dynamiclib"
+
 MACOSXX86:
 	$(MAKE) dynlibs staticlibs bins \
 	"ARCH = MACOSXX86" \
@@ -701,12 +719,12 @@ WIN64:
 	"ARCH = WIN64" \
 	"COPTO = /Fo" \
 	"LOPTO = /OUT:" \
-	"CC = cl.exe /nologo /MT /DWIN64" \
-	"CXX = cl.exe /nologo /MT /TP /DWIN64" \
+	"CC = cl.exe /nologo /MTD /DWIN64" \
+	"CXX = cl.exe /nologo /MTD /TP /DWIN64" \
 	"DEF = /D" \
 	"CCFLAGS =  /EHsc /Wp64 /wd4996 /O2 /D\"_CRT_SECURE_NO_DEPRECATE\"" \
 	"CXXFLAGS = /EHsc /Wp64 /wd4996 /O2 /D\"_CRT_SECURE_NO_DEPRECATE\"" \
-	"TCLLDFLAGS = tcl85.lib" \
+	"TCLLDFLAGS = tcl86t.lib" \
 	"AR = ar" \
 	"NM = nm -p" \
 	"RANLIB = touch" \

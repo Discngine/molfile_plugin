@@ -11,7 +11,7 @@
  *
  *      $RCSfile: ccp4plugin.C,v $
  *      $Author: johns $       $Locker:  $             $State: Exp $
- *      $Revision: 1.43 $       $Date: 2018/03/08 23:37:28 $
+ *      $Revision: 1.46 $       $Date: 2020/10/21 15:41:19 $
  *
  ***************************************************************************/
 
@@ -34,6 +34,7 @@
 //
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <math.h>
 #include <string.h>
 
@@ -71,17 +72,19 @@
 typedef struct {
   FILE *fd;
   int voxtype; 
-  long voxcount;
+  ptrdiff_t voxcount;
   int dataflags;
   int imodstamp;
   int imodflags;
+  int nversion;    // MRC/IMOD version conformance tag
+  char exttype[4]; // extended header type
   int nsets;
   int swap;
   int xyz2crs[3];
   float amin; 
   float amax; 
   float amean;
-  long dataOffset;
+  ptrdiff_t dataOffset;
   molfile_volumetric_t *vol;
 } ccp4_t;
 
@@ -99,12 +102,13 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
   int nxyzstart[3], extent[3], grid[3], crs2xyz[3], voxtype, symBytes;
   float origin2k[3];
   int swap, i, xIndex, yIndex, zIndex;
-  long dataOffset, filesize;
+  ptrdiff_t dataOffset=0, filesize=0;
   float cellDimensions[3], cellAngles[3], xaxis[3], yaxis[3], zaxis[3];
   float alpha, beta, gamma, xScale, yScale, zScale, z1, z2, z3;
   float amin, amax, amean;
-  int dataflags=0,imodstamp=0,imodflags=0;
-  
+  int dataflags=0,imodstamp=0,imodflags=0,nversion=0;
+  char exttype[4] = {' ', ' ', ' ', ' '};
+ 
   fd = fopen(filepath, "rb");
   if (!fd) {
     printf("ccp4plugin) Error opening file %s\n", filepath);
@@ -151,6 +155,19 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
     return NULL;
   }
 
+  fseek(fd, 150, SEEK_SET);
+  if (fread(&exttype, 4*sizeof(char), 1, fd) != 1) {
+    printf("ccp4plugin) Error: failed to read exttype from MRC file.\n");
+    return NULL;
+  }
+
+  // Check for CCP4/IMOD version tag at offset 154
+  fseek(fd, 154, SEEK_SET);
+  if (fread(&nversion, sizeof(int), 1, fd) != 1) {
+    printf("ccp4plugin) Error: failed to read CCP4/IMOD VERSION from MRC file.\n");
+    return NULL;
+  }
+
   // Check file endianism using some heuristics
   swap = 0;
   int tmp[3];
@@ -190,6 +207,7 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
     swap4_aligned(&symBytes, 1);
     swap4_aligned(&imodstamp, 1);
     swap4_aligned(&imodflags, 1);
+    swap4_aligned(&nversion, 1);
   }
 
   // Check for the string "MAP" at word 52 byte 208, indicating a CCP4 file.
@@ -216,16 +234,16 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
 
     if (imodflags & IMOD_FLAG_SIGNED) {
       dataflags |= DATA_FLAG_SIGNED;
-      printf("ccp4plugin) IMOD flag: data uses signed-bytes\n");
+      printf("ccp4plugin)  IMOD flag: data uses signed-bytes\n");
     } else {
-      printf("ccp4plugin) IMOD flag: data uses unsigned-bytes\n");
+      printf("ccp4plugin)  IMOD flag: data uses unsigned-bytes\n");
     }
 
     if (imodflags & IMOD_FLAG_HEADER_SPACING)
-      printf("ccp4plugin) IMOD flag: pixel spacing set in extended header\n");
+      printf("ccp4plugin)  IMOD flag: pixel spacing set in extended header\n");
 
     if (imodflags & IMOD_FLAG_ORIGIN_INVERTED_SIGN)
-      printf("ccp4plugin) IMOD flag: origin sign is inverted.\n");
+      printf("ccp4plugin)  IMOD flag: origin sign is inverted.\n");
   } else {
     imodflags = 0;
     printf("ccp4plugin) No IMOD stamp found.\n");
@@ -276,30 +294,43 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
   }
 
 #if 1
-  printf("ccp4plugin)    extent: %d x %d x %d\n",
+  printf("ccp4plugin)   nversion: %d\n", nversion);
+  printf("ccp4plugin)     extent: %d x %d x %d\n",
          extent[0], extent[1], extent[2]);
-  printf("ccp4plugin) nxyzstart: %d, %d, %d\n", 
+  printf("ccp4plugin)  nxyzstart: %d, %d, %d\n", 
          nxyzstart[0], nxyzstart[1], nxyzstart[2]);
-  printf("ccp4plugin)  origin2k: %f, %f, %f\n", 
+  printf("ccp4plugin)   origin2k: %f, %f, %f\n", 
          origin2k[0], origin2k[1], origin2k[2]);
-  printf("ccp4plugin)      grid: %d x %d x %d\n", grid[0], grid[1], grid[2]);
-  printf("ccp4plugin)   celldim: %f x %f x %f\n", 
+  printf("ccp4plugin)       grid: %d x %d x %d\n", grid[0], grid[1], grid[2]);
+  printf("ccp4plugin)    celldim: %f x %f x %f\n", 
          cellDimensions[0], cellDimensions[1], cellDimensions[2]);
-  printf("cpp4plugin)cellangles: %f, %f, %f\n", 
+  printf("cpp4plugin) cellangles: %f, %f, %f\n", 
          cellAngles[0], cellAngles[1], cellAngles[2]);
-  printf("ccp4plugin)   crs2xyz: %d %d %d\n", 
+  printf("ccp4plugin)    crs2xyz: %d %d %d\n", 
          crs2xyz[0], crs2xyz[1], crs2xyz[2]);
-  printf("ccp4plugin)      amin: %g  amax: %g  amean: %g\n", amin, amax, amean);
-  printf("ccp4plugin)  symBytes: %d\n", symBytes);
+  printf("ccp4plugin)       amin: %g  amax: %g  amean: %g\n", 
+         amin, amax, amean);
+  printf("ccp4plugin)   symBytes: %d\n", symBytes);
+  printf("ccp4plugin)    extType: %c%c%c%c\n", 
+         exttype[0], exttype[1], exttype[2], exttype[3]);
 #endif
 
   // Check the dataOffset: this fixes the problem caused by files claiming
   // to have symmetry records when they do not.
+#if defined(_WIN64)
+  _fseeki64(fd, 0, SEEK_END);
+  filesize = _ftelli64(fd);
+#else
   fseek(fd, 0, SEEK_END);
   filesize = ftell(fd);
+#endif
+
+  printf("ccp4plugin) filesize: %td\n", filesize);
 
   // compute data offset using file size and voxel type info
-  long voxcount = long(extent[0]) * long(extent[1]) * long(extent[2]);
+  ptrdiff_t voxcount = ptrdiff_t(extent[0]) * ptrdiff_t(extent[1]) * ptrdiff_t(extent[2]);
+  printf("ccp4plugin) voxcount: %td\n", voxcount);
+
   if (voxtype == MRC_TYPE_BYTE) {
     dataOffset = filesize - sizeof(char)*voxcount;
   } else if (voxtype == MRC_TYPE_FLOAT) {
@@ -311,6 +342,8 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
   } else {
     printf("ccp4plugin) unimplemented voxel type!\n");
   }
+
+  printf("ccp4plugin) dataOffset: %td\n", dataOffset);
 
   if (dataOffset != (CCP4HDSIZE + symBytes)) {
     if (dataOffset == CCP4HDSIZE) {
@@ -334,11 +367,15 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
 
   // Read symmetry records -- organized as 80-byte lines of text.
   if (symBytes != 0) {
-    printf("ccp4plugin) Symmetry records found:\n");
-    fseek(fd, CCP4HDSIZE, SEEK_SET);
-    for (i = 0; i < symBytes/80; i++) {
-      fgets(symData, 81, fd);
-      printf("ccp4plugin) %s\n", symData);
+    if (dataflags & DATA_FLAG_IMOD_FORMAT) {
+      printf("ccp4plugin) IMOD format, not printing symmetry string section\n");
+    } else {
+      printf("ccp4plugin) Symmetry records found:\n");
+      fseek(fd, CCP4HDSIZE, SEEK_SET);
+      for (i = 0; i < symBytes/80; i++) {
+        fgets(symData, 81, fd);
+        printf("ccp4plugin) %s\n", symData);
+      }
     }
   }
 
@@ -368,6 +405,8 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
   ccp4->dataflags = dataflags;
   ccp4->imodstamp = imodstamp;
   ccp4->imodflags = imodflags;
+  ccp4->nversion = nversion;
+  memcpy(ccp4->exttype, exttype, sizeof(exttype));
   ccp4->swap = swap;
   ccp4->dataOffset = dataOffset;
   ccp4->amin = amin;
@@ -537,7 +576,7 @@ static int read_ccp4_data(void *v, int set, float *datablock,
                          float *colorblock) {
   ccp4_t *ccp4 = (ccp4_t *)v;
   int x, y, z, xSize, ySize, zSize, extent[3], coord[3];
-  long xySize;
+  ptrdiff_t xySize;
   FILE *fd = ccp4->fd;
 
   xSize = ccp4->vol[0].xsize;
@@ -580,7 +619,7 @@ static int read_ccp4_data(void *v, int set, float *datablock,
           x = coord[ccp4->xyz2crs[0]];
           y = coord[ccp4->xyz2crs[1]];
           z = coord[ccp4->xyz2crs[2]];
-          datablock[x + long(y*xSize) + long(z*xySize)] = rowdata[coord[0]];
+          datablock[x + ptrdiff_t(y*xSize) + ptrdiff_t(z*xySize)] = rowdata[coord[0]];
         }
       }
     }
@@ -610,7 +649,7 @@ static int read_ccp4_data(void *v, int set, float *datablock,
           x = coord[ccp4->xyz2crs[0]];
           y = coord[ccp4->xyz2crs[1]];
           z = coord[ccp4->xyz2crs[2]];
-          datablock[x + long(y*xSize) + long(z*xySize)] = rowdata[coord[0]];
+          datablock[x + ptrdiff_t(y*xSize) + ptrdiff_t(z*xySize)] = rowdata[coord[0]];
         }
       }
     }
@@ -641,7 +680,7 @@ static int read_ccp4_data(void *v, int set, float *datablock,
           x = coord[ccp4->xyz2crs[0]];
           y = coord[ccp4->xyz2crs[1]];
           z = coord[ccp4->xyz2crs[2]];
-          datablock[x + long(y*xSize) + long(z*xySize)] = rowdata[coord[0]];
+          datablock[x + ptrdiff_t(y*xSize) + ptrdiff_t(z*xySize)] = rowdata[coord[0]];
         }
       }
     }
@@ -674,7 +713,7 @@ static int read_ccp4_data(void *v, int set, float *datablock,
           x = coord[ccp4->xyz2crs[0]];
           y = coord[ccp4->xyz2crs[1]];
           z = coord[ccp4->xyz2crs[2]];
-          datablock[x + long(y*xSize) + long(z*xySize)] = rowdata[coord[0]];
+          datablock[x + ptrdiff_t(y*xSize) + ptrdiff_t(z*xySize)] = rowdata[coord[0]];
         }
       }
     }
@@ -709,7 +748,7 @@ static int read_ccp4_data(void *v, int set, float *datablock,
           x = coord[ccp4->xyz2crs[0]];
           y = coord[ccp4->xyz2crs[1]];
           z = coord[ccp4->xyz2crs[2]];
-          datablock[x + long(y*xSize) + long(z*xySize)] = rowdata[coord[0]];
+          datablock[x + ptrdiff_t(y*xSize) + ptrdiff_t(z*xySize)] = rowdata[coord[0]];
         }
       }
     }
@@ -740,7 +779,7 @@ static int read_ccp4_data(void *v, int set, float *datablock,
           y = coord[ccp4->xyz2crs[1]];
           z = coord[ccp4->xyz2crs[2]];
           grayscale = rowdata[coord[0]].red + rowdata[coord[0]].blue + rowdata[coord[0]].green;
-          datablock[x + long(y*xSize) + long(z*xySize)] = grayscale/3.0;
+          datablock[x + ptrdiff_t(y*xSize) + ptrdiff_t(z*xySize)] = grayscale/3.0;
         }
       }
     }
@@ -770,7 +809,7 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   plugin.prettyname = "CCP4, MRC Density Map";
   plugin.author = "Eamon Caddigan, Brendan McMorrow, John Stone";
   plugin.majorv = 2;
-  plugin.minorv = 1;
+  plugin.minorv = 3;
   plugin.is_reentrant = VMDPLUGIN_THREADSAFE;
   plugin.filename_extension = "ccp4,mrc,map";
   plugin.open_file_read = open_ccp4_read;
