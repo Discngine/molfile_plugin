@@ -15,7 +15,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-      
         include:
           - os: ubuntu-latest,
             artifact: "ubuntu_gcc.7z",
@@ -25,7 +24,7 @@ jobs:
             cxx: "g++",
             archiver: "7z a",
             generators: "Ninja"
-            os: macos-latest,
+          - os: macos-latest,
             artifact: "macos_clang.7z",
             build_type: "Release",
             architecture: "MACOSXX86_64",
@@ -41,13 +40,13 @@ jobs:
           echo github.event.action: ${{ github.event.action }}
           echo github.event_name: ${{ github.event_name }}
       - name: Install dependencies on macos
-        if: startsWith(matrix.config.os, 'macos')
+        if: startsWith(matrix.os, 'macos')
         run: |
           brew install netcdf tcl
       - name: Build
         shell: bash
         working-directory: vmd/plugins
-        run: make ${{ matrix.config.architecture }}
+        run: make ${{ matrix.architecture }}
       - name: Make Distrib
         shell: bash
         env:
