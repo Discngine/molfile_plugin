@@ -55,6 +55,7 @@ jobs:
           
       - name: Build
         shell: bash
+        working-directory: vmd/plugins
         run: make ${{ matrix.config.architecture }}
 
       - name: Make Distrib
