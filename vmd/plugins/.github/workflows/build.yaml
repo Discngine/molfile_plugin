@@ -43,9 +43,10 @@ jobs:
           }
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
 
       - name: Print env
+        uses: actions/checkout@v2
+        
         run: |
           echo github.event.action: ${{ github.event.action }}
           echo github.event_name: ${{ github.event_name }}
