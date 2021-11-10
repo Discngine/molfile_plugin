@@ -11,16 +11,13 @@ jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    name: ${{ matrix.config.name }}
-    runs-on: ${{ matrix.config.os }} # будет запускаться по очереди на всех типах машин
+    runs-on: ${{ matrix.os }} # будет запускаться по очереди на всех типах машин
     strategy:
       fail-fast: false
       matrix:
-        config: 
-          UbuntuLatest:
-          {
-            name: "Ubuntu_Latest_GCC",
-            os: ubuntu-latest,
+      
+        include:
+          - os: ubuntu-latest,
             artifact: "ubuntu_gcc.7z",
             build_type: "Release",
             architecture: "LINUXAMD64",
@@ -28,10 +25,6 @@ jobs:
             cxx: "g++",
             archiver: "7z a",
             generators: "Ninja"
-          }
-          macOsLatest:
-          {
-            name: "macOS Latest Clang",
             os: macos-latest,
             artifact: "macos_clang.7z",
             build_type: "Release",
@@ -40,27 +33,21 @@ jobs:
             cxx: "clang++",
             archiver: "7za a",
             generators: "Ninja"
-          }
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-
       - name: Print env
         uses: actions/checkout@v2
-        
         run: |
           echo github.event.action: ${{ github.event.action }}
           echo github.event_name: ${{ github.event_name }}
-
       - name: Install dependencies on macos
         if: startsWith(matrix.config.os, 'macos')
         run: |
           brew install netcdf tcl
-          
       - name: Build
         shell: bash
         working-directory: vmd/plugins
         run: make ${{ matrix.config.architecture }}
-
       - name: Make Distrib
         shell: bash
         env:
