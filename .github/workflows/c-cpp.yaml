@@ -39,7 +39,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ../molfile_plugin_ubuntu_gcc.tar.gz
+        asset_path: vmd/molfile_plugin_ubuntu_gcc.tar.gz
         asset_name: molfile_plugin_ubuntu_gcc.tar.gz
         asset_content_type: application/gzip
 
@@ -76,6 +76,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ../molfile_plugin_macos_clang.tar.gz
+        asset_path: vmd/molfile_plugin_ubuntu_gcc.tar.gz
         asset_name: molfile_plugin_macos_clang.tar.gz
         asset_content_type: application/gzip
