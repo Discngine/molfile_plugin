@@ -133,6 +133,7 @@ typedef struct {
   float charge;       /**< optional charge value                 */
   float radius;       /**< optional radius value                 */
   int atomicnumber;   /**< optional element atomic number        */
+  int modelnumber;    /**< optional model number                 */
 
 #if 0
   char complex[16];
