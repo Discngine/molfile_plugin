@@ -949,8 +949,9 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
       }
     }
     atom->resid_auth=atoi(residAuthbuffer);
-    strncpy(atom->atom_type, atomtypebuffer,8);
-    strncpy(atom->chain_auth,parser->chain_auth,16);
+    strcpy(atom->atom_type, atomtypebuffer);
+    atom->chain_auth[0]=parser->chain_auth[0];
+    atom->chain_auth[1]='\0';
     // Coordinates must be saved until timestep is called 
     xyzcount = count*3;
 
