@@ -82,7 +82,8 @@ typedef struct pdbxParser {
 static unsigned char charToNum[128];
 
 enum TableColums {
-  COLUMN_NUMBER = 0,
+  COLUMN_ATOM_TYPE =0,
+  COLUMN_NUMBER,
   COLUMN_NAME,
   COLUMN_TYPE,
   COLUMN_TYPE_AUTH,
@@ -512,7 +513,11 @@ static int parseNumberAtoms(pdbxParser* parser) {
   while (isStructureDataHeader(buffer)) {
     sscanf(buffer+base_word_size, "%s", wordbuffer); // table is used in parseStructure too
     // assign integer values to each column 
-    if (0 == strcmp(wordbuffer, "id")) {
+    if (0 == strcmp(wordbuffer, "group_PDB"))
+    {   
+      parser->table[tableSize] = COLUMN_ATOM_TYPE;
+      column_exists[COLUMN_ATOM_TYPE] = true;
+    } else if (0 == strcmp(wordbuffer, "id")) {
       parser->table[tableSize] = COLUMN_NUMBER;
       column_exists[COLUMN_NUMBER] = true;
 
@@ -736,6 +741,7 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
 
   char buffer[BUFFER_SIZE];
 
+  char atomtypebuffer[COLUMN_BUFFER_SIZE];
   char namebuffer[COLUMN_BUFFER_SIZE];
   char occupancybuffer[COLUMN_BUFFER_SIZE];
   char bfactorbuffer[COLUMN_BUFFER_SIZE];
@@ -751,6 +757,7 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
   void * columns[MAX_COLUMNS];
 
   memset(buffer, 0, sizeof(buffer));
+  memset(atomtypebuffer, 0, sizeof(atomtypebuffer));
   memset(namebuffer, 0, sizeof(namebuffer));
   memset(occupancybuffer, 0, sizeof(occupancybuffer));
   memset(bfactorbuffer, 0, sizeof(bfactorbuffer));
@@ -796,6 +803,9 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
 
   for (i=0; i<tableSize; i++) {
     switch (table[i]) {
+      case COLUMN_ATOM_TYPE:
+        columns[i]= atomtypebuffer;
+      break;
       case COLUMN_NUMBER:
         columns[i] = trash;
         break;
@@ -803,6 +813,8 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
       case COLUMN_NAME:
         columns[i] = namebuffer;
         break;
+
+
 
       case COLUMN_TYPE:
         columns[i] = atoms->type;
@@ -933,9 +945,12 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
         // will copy each column string into the atom struct
         // or save the string if we need to convert it
         getNextWord(buffer, columns[i], pos, sizeof(buffer), COLUMN_BUFFER_SIZE);
+
       }
     }
-
+    atom->resid_auth=atoi(residAuthbuffer);
+    strcpy(atom->atom_type, atomtypebuffer);
+    strcpy(atom->chain_auth,parser->chain_auth);
     // Coordinates must be saved until timestep is called 
     xyzcount = count*3;
 
@@ -1042,10 +1057,7 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
 
     if (parseFlags & FLAG_MODEL_NUM) {
       if (model_num_buf[0] != '\0') {
-        atom->altloc[0] = model_num_buf[0];
-      }
-      if (model_num_buf[1] != '\0') {
-        atom->altloc[1] = model_num_buf[1];
+        atom->modelnumber = atoi(model_num_buf);
       }
     }
 
