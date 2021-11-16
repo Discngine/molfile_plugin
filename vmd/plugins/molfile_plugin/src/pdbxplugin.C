@@ -948,6 +948,7 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
 
       }
     }
+    fprintf(stdout,"atomtypebuffer: %s\n",atomtypebuffer);
     atom->resid_auth=atoi(residAuthbuffer);
     strncpy(atom->atom_type, atomtypebuffer,8);
     atom->chain_auth[0]=parser->chain_auth[0];
