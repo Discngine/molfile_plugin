@@ -87,6 +87,7 @@ enum TableColums {
   COLUMN_NAME,
   COLUMN_TYPE,
   COLUMN_TYPE_AUTH,
+  COLUMN_ALT_LOC,
   COLUMN_RESNAME,
   COLUMN_RESID,
   COLUMN_RESID_AUTH,
@@ -525,6 +526,11 @@ static int parseNumberAtoms(pdbxParser* parser) {
       parser->table[tableSize] = COLUMN_NAME;
       column_exists[COLUMN_NAME] = true;
 
+    } else if (0 == strcmp(wordbuffer, "label_alt_id")
+               || (parser->pdb_dev && 0 == strcmp(wordbuffer, "alt_id"))) {
+      parser->table[tableSize] = COLUMN_ALT_LOC;
+      column_exists[COLUMN_ALT_LOC] = true;
+
     } else if (0 == strcmp(wordbuffer, "label_comp_id")
                || (parser->pdb_dev && 0 == strcmp(wordbuffer, "comp_id"))) {
       parser->table[tableSize] = COLUMN_RESNAME;
@@ -564,7 +570,13 @@ static int parseNumberAtoms(pdbxParser* parser) {
       parser->table[tableSize] = COLUMN_INSERTION;
       column_exists[COLUMN_INSERTION] = true;
 
-    } else if (0 == strcmp(wordbuffer, "B_iso_or_equiv")) {
+    }
+    else if (0 == strcmp(wordbuffer, "label_alt_id")) {
+      parser->table[tableSize] = COLUMN_TYPE;
+      column_exists[COLUMN_INSERTION] = true;
+
+    }
+     else if (0 == strcmp(wordbuffer, "B_iso_or_equiv")) {
       parser->table[tableSize] = COLUMN_BFACTOR;
       column_exists[COLUMN_BFACTOR] = true;
 
@@ -746,6 +758,7 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
   char occupancybuffer[COLUMN_BUFFER_SIZE];
   char bfactorbuffer[COLUMN_BUFFER_SIZE];
   char chargebuffer[COLUMN_BUFFER_SIZE];
+  char altlocbuffer[COLUMN_BUFFER_SIZE];
   char residbuffer[COLUMN_BUFFER_SIZE];
   char residAuthbuffer[COLUMN_BUFFER_SIZE];
   char chainbuffer[COLUMN_BUFFER_SIZE];
@@ -761,6 +774,7 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
   memset(namebuffer, 0, sizeof(namebuffer));
   memset(occupancybuffer, 0, sizeof(occupancybuffer));
   memset(bfactorbuffer, 0, sizeof(bfactorbuffer));
+  memset(altlocbuffer, 0, sizeof(altlocbuffer));
   memset(chargebuffer, 0, sizeof(chargebuffer));
   memset(residbuffer, 0, sizeof(residbuffer));
   memset(residAuthbuffer, 0, sizeof(residAuthbuffer));
@@ -784,7 +798,7 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
   int hashCount = 1;
   int head = 0;
   int chainAuthIdx = MAX_COLUMNS-1, typeIdx = MAX_COLUMNS-1, resnameIdx = MAX_COLUMNS-1;
-  int insertionIdx = MAX_COLUMNS-1, typeAuthIdx = MAX_COLUMNS-1;
+  int insertionIdx = MAX_COLUMNS-1, typeAuthIdx = MAX_COLUMNS-1, altLocIdx=MAX_COLUMNS-1;
 #if (vmdplugin_ABIVERSION >= 20)
   int chainIdx = MAX_COLUMNS-1;
 #endif
@@ -814,7 +828,10 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
         columns[i] = namebuffer;
         break;
 
-
+      case COLUMN_ALT_LOC:
+        columns[i] = altlocbuffer;
+        altLocIdx=i;
+        break;
 
       case COLUMN_TYPE:
         columns[i] = atoms->type;
@@ -1081,6 +1098,7 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
     columns[typeIdx] = atom->type;
     columns[resnameIdx] = atom->resname;
     columns[insertionIdx] = atom->insertion;
+    columns[altLocIdx]=atom->altloc;
 #if (vmdplugin_ABIVERSION >= 20)
     columns[chainIdx] = atom->chain;
 #endif
