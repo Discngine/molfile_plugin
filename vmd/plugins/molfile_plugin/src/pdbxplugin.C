@@ -613,13 +613,13 @@ static int parseNumberAtoms(pdbxParser* parser) {
   }
 
   // increment numatoms until we get to the end of the file
-  while (buffer[0] != '#') {
+  
+  while (buffer[0] != '#' && buffer[0] != '\n') {
     // if this is true then we couldnt find the numatoms
     if (NULL == fgets(buffer, BUFFER_SIZE, parser->file))
       return 0;
     ++numatoms;
   }
-
   rewind(parser->file);
   // Cut off any junk columns from the end of table
 
@@ -1102,7 +1102,7 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
 #if (vmdplugin_ABIVERSION >= 20)
     columns[chainIdx] = atom->chain;
 #endif
-  } while (buffer[0] != '#'); //do until all the atoms have been read
+  } while (buffer[0] != '#'  && buffer[0] != '\n'); //do until all the atoms have been read
 
   // after we finish parsing, set optflags 
 #if (vmdplugin_ABIVERSION < 20)
@@ -1219,7 +1219,7 @@ static bool readAngleBonds(molfile_atom_t * atoms, pdbxParser* parser) {
   }
 
   // figure out how many bonds are being defined 
-  while (buffer[0] != '#') {
+  while (buffer[0] != '#' && buffer[0] != '\n') {
     if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) could not read bond information.\n");
       return false;
@@ -1257,7 +1257,7 @@ static bool readAngleBonds(molfile_atom_t * atoms, pdbxParser* parser) {
   }
 
   bnum = 0;
-  while (buffer[0] != '#') {
+  while (buffer[0] != '#' && buffer[0] != '\n') {
     pos = 0;
     // copy each column of the table into the appropriate columns index 
     for (i=0; i<bondTableSize; ++i) {
@@ -1405,7 +1405,7 @@ static bool readRMSDBonds(molfile_atom_t * atoms, pdbxParser* parser) {
   }
 
   // figure out how many bonds are being defined 
-  while (buffer[0] != '#') {
+  while (buffer[0] != '#' && buffer[0] != '\n') {
     if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) could not read bond information.\n");
       return false;
@@ -1433,7 +1433,7 @@ static bool readRMSDBonds(molfile_atom_t * atoms, pdbxParser* parser) {
   }
 
   bnum = 0;
-  while (buffer[0] != '#') {
+  while (buffer[0] != '#' && buffer[0] != '\n') {
     int pos = 0;
     // copy each column of the table into the appropriate columns index 
     for (i=0; i<bondTableSize; ++i) {
@@ -1581,7 +1581,7 @@ static bool parse_pdbx_ihm_sphere_data(pdbxParser* parser) {
 
   // figure out how many elems are being defined
   nelems = 0;
-  while (buffer[0] != '#') {
+  while (buffer[0] != '#' && buffer[0] != '\n') {
     ++nelems;
     if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
       break;
@@ -1608,7 +1608,7 @@ static bool parse_pdbx_ihm_sphere_data(pdbxParser* parser) {
   parser->g_data = new molfile_graphics_t[nelems];
 
   nelems = 0; // reset counter so we can use it again
-  while (buffer[0] != '#') {
+  while (buffer[0] != '#' && buffer[0] != '\n') {
     int pos = 0;
     // copy each column of the table into the appropriate columns index
     for (i=0; i<tableSize; ++i) {
@@ -1711,7 +1711,7 @@ static bool parse_pdbx_ihm_restraints_data(pdbxParser* parser) {
 
   // figure out how many elems are being defined
   nelems = 0;
-  while (buffer[0] != '#') {
+  while (buffer[0] != '#' && buffer[0] != '\n') {
     ++nelems;
     if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
       break;
@@ -1738,7 +1738,7 @@ static bool parse_pdbx_ihm_restraints_data(pdbxParser* parser) {
   if (nelems > 0) {
     printf("Found %d IHM crosslinks:\n", nelems);
     nelems = 0; // reset counter so we can use it again
-    while (buffer[0] != '#') {
+    while (buffer[0] != '#' && buffer[0] != '\n') {
       int pos = 0;
       // copy each column of the table into the appropriate columns index
       for (i=0; i<tableSize; ++i) {
@@ -1823,7 +1823,7 @@ static bool parse_pdbx_ihm_restraints_data(pdbxParser* parser) {
 
   // figure out how many elems are being defined
   nelems = 0;
-  while (buffer[0] != '#') {
+  while (buffer[0] != '#' && buffer[0] != '\n') {
     ++nelems;
     if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
       break;
@@ -1851,7 +1851,7 @@ static bool parse_pdbx_ihm_restraints_data(pdbxParser* parser) {
     printf("Found %d IHM crosslink restraints:\n", nelems);
 
     nelems = 0; // reset counter so we can use it again
-    while (buffer[0] != '#') {
+    while (buffer[0] != '#' && buffer[0] != '\n') {
       int pos = 0;
       // copy each column of the table into the appropriate columns index
       for (i=0; i<tableSize; ++i) {
