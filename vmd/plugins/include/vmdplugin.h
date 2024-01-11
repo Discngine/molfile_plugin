@@ -144,7 +144,7 @@ typedef struct {
 /**
  * Use this macro to initialize the abiversion member of each plugin
  */
-#define vmdplugin_ABIVERSION  18
+#define vmdplugin_ABIVERSION  20
 
 /*@{*/
 /** Use this macro to indicate a plugin's thread-safety at registration time */
