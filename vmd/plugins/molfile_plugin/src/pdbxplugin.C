@@ -897,9 +897,10 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
         break;
 
       case COLUMN_CHAIN_AUTH:
+      
         columns[i] = chainAuth;
         chainAuthIdx = i;
-        doBonds++;
+        // doBonds++;
         break;
 
       case COLUMN_MODEL_NUM:
@@ -914,9 +915,9 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
   }
 
   // If the two optional auth fields aren't present, don't look for extra bonds
-  if (doBonds != MAX_OPTIONAL_AUTH_FIELDS) {
+  // if (doBonds != MAX_OPTIONAL_AUTH_FIELDS) {
     doBonds = 0;
-  }
+  // }
 
   // Start parsing, Skip through junk
   atomdata = 0;
@@ -962,15 +963,12 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
         // will copy each column string into the atom struct
         // or save the string if we need to convert it
         getNextWord(buffer, columns[i], pos, sizeof(buffer), COLUMN_BUFFER_SIZE);
-
       }
     }
 
     atom->resid_auth=atoi(residAuthbuffer);
     strncpy(atom->atom_type, atomtypebuffer,8);
-    strcpy(atom->chain_auth,parser->chain_auth);
-    /*atom->chain_auth[0]=parser->chain_auth[0];
-    atom->chain_auth[1]='\0';*/
+
     // Coordinates must be saved until timestep is called 
     xyzcount = count*3;
 
@@ -1086,19 +1084,18 @@ static int parseStructure(molfile_atom_t * atoms, int * optflags, pdbxParser* pa
       parser->error = true;
       return -1;
     }
+      columns[chainAuthIdx] = chainAuth;
+      strcpy(atom->chain_auth,chainAuth);
 
     ++count;
     ++atom;
     typeAuth += TYPE_SIZE;
-    if (doBonds) {
-      chainAuth += CHAIN_SIZE;
-      columns[chainAuthIdx] = chainAuth;
-    }
     columns[typeAuthIdx] = typeAuth;
     columns[typeIdx] = atom->type;
     columns[resnameIdx] = atom->resname;
     columns[insertionIdx] = atom->insertion;
     columns[altLocIdx]=atom->altloc;
+    // columns[chainAuthIdx] = atom->chain_auth;
 #if (vmdplugin_ABIVERSION >= 20)
     columns[chainIdx] = atom->chain;
 #endif
@@ -1504,7 +1501,7 @@ static bool readRMSDBonds(molfile_atom_t * atoms, pdbxParser* parser) {
   }
 
   if (parser->nbonds != bnum) {
-    printf("pdbxplugin: ERROR: mismatch in number of bonds.\n");
+    printf("pdbxplugin: ERROR: mismatch in number of bonds.%d vs %d\n",parser->nbonds,bnum);
   }
 
 #ifdef PDBX_DEBUG
@@ -2127,10 +2124,10 @@ static int read_pdbx_structure(void * mydata, int *optflags, molfile_atom_t *ato
     printf("pdbxplugin) Error while trying to parse pdbx structure\n");
     return MOLFILE_ERROR;
   }
-
-  if (readBonds(atoms, data->parser)) {
+  //PS/ skipping this as I don't need it for fpocket & it fails now and don't know how to act upon it as reading auth chain & resid's trigger bond reading.
+  /*if (readBonds(atoms, data->parser)) {
     *optflags |= MOLFILE_BONDSSPECIAL;
-  }
+  }*/
   return MOLFILE_SUCCESS;
 }
 
