@@ -468,7 +468,7 @@ static float stringToFloat(char * str) {
 
 
 static bool isStructureDataHeader(const char* strbuf) {
-  if (strstr(strbuf, "_atom_site.") != NULL) {
+  if (strncmp(strbuf, "_atom_site.",11) == 0) {
     return true;
   }
   if (strstr(strbuf, "_ihm_starting_model_coord.") != NULL) {
